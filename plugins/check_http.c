@@ -123,6 +123,9 @@ int min_page_len = 0;
 int max_page_len = 0;
 int redir_depth = 0;
 int max_depth = 15;
+int expected_content_size = 0 ;
+int content_size = 0;
+int content_size_mismatch = 0;
 char *http_method;
 char *http_post_data;
 char *http_content_type;
@@ -233,6 +236,7 @@ process_arguments (int argc, char **argv)
     {"max-age", required_argument, 0, 'M'},
     {"content-type", required_argument, 0, 'T'},
     {"pagesize", required_argument, 0, 'm'},
+    {"contentsize",required_argument, 0, 'F'},
     {"invert-regex", no_argument, NULL, INVERT_REGEX},
     {"use-ipv4", no_argument, 0, '4'},
     {"use-ipv6", no_argument, 0, '6'},
@@ -257,7 +261,7 @@ process_arguments (int argc, char **argv)
   }
 
   while (1) {
-    c = getopt_long (argc, argv, "Vvh46t:c:w:A:k:H:P:j:T:I:a:b:d:e:p:s:R:r:u:f:C:J:K:nlLS::m:M:NE", longopts, &option);
+    c = getopt_long (argc, argv, "Vvh46t:c:w:A:k:H:P:j:T:I:a:b:d:e:p:s:R:r:u:f:F:C:J:K:nlLS::m:M:NE", longopts, &option);
     if (c == -1 || c == EOF)
       break;
 
@@ -464,6 +468,11 @@ process_arguments (int argc, char **argv)
     case 'v': /* verbose */
       verbose = TRUE;
       break;
+    case 'F':
+      {
+      expected_content_size = strtoimax(optarg,NULL,10);
+      break;
+      }
     case 'm': /* min_page_length */
       {
       char *tmp;
@@ -1179,6 +1188,14 @@ check_http (void)
   page += (size_t) strspn (page, "\r\n");
   header[pos - header] = 0;
 
+  content_size = pagesize-(pos-full_page+2);
+  if((expected_content_size > 0) && content_size != expected_content_size){
+    content_size_mismatch = true;
+  }
+  else{
+    content_size_mismatch = false;
+  }
+
   if (chunked_transfer_encoding(header) && *page)
     page = decode_chunked_page(page, page);
 
@@ -1236,8 +1253,10 @@ check_http (void)
     /* check redirected page if specified */
     else if (http_status >= 300) {
 
-      if (onredirect == STATE_DEPENDENT)
+      if (onredirect == STATE_DEPENDENT){
+        content_size_mismatch = false;
         redir (header, status_line);
+      }
       else
         result = max_state_alt(onredirect, result);
       xasprintf (&msg, _("%s - "), status_line);
@@ -1256,6 +1275,10 @@ check_http (void)
     result = max_state_alt(check_document_dates(header, &msg), result);
   }
 
+  if(content_size_mismatch){
+     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
+     result = STATE_CRITICAL;
+  }
 
   /* Page and Header content checks go here */
   if (strlen (header_expect)) {
