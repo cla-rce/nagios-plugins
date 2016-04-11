@@ -1319,6 +1319,12 @@ check_http (void)
       result = STATE_CRITICAL;
     }
   }
+  
+  //if result is OK but size doesn't match return an error
+  if(content_size_mismatch && (result == 0)){
+     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
+     result = STATE_CRITICAL;
+  }
 
   /* make sure the page is of an appropriate size */
   /* page_len = get_content_length(header); */
@@ -1329,10 +1335,6 @@ check_http (void)
   /* FIXME: IIRC pagesize returns headers - shouldn't we make
    * it == get_content_length(header) ??
    */
-  if(content_size_mismatch){
-     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
-     result = STATE_CRITICAL;
-  }
   page_len = pagesize;
   if ((max_page_len > 0) && (page_len > max_page_len)) {
     xasprintf (&msg, _("%spage size %d too large, "), msg, page_len);
