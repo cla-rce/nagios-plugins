@@ -1275,10 +1275,6 @@ check_http (void)
     result = max_state_alt(check_document_dates(header, &msg), result);
   }
 
-  if(content_size_mismatch){
-     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
-     result = STATE_CRITICAL;
-  }
 
   /* Page and Header content checks go here */
   if (strlen (header_expect)) {
@@ -1322,6 +1318,12 @@ check_http (void)
       xasprintf (&msg, _("%sExecute Error: %s, "), msg, errbuf);
       result = STATE_CRITICAL;
     }
+  }
+  
+  //if result is OK but size doesn't match return an error
+  if(content_size_mismatch && (result == 0)){
+     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
+     result = STATE_CRITICAL;
   }
 
   /* make sure the page is of an appropriate size */
