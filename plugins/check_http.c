@@ -1275,10 +1275,6 @@ check_http (void)
     result = max_state_alt(check_document_dates(header, &msg), result);
   }
 
-  if(content_size_mismatch){
-     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
-     result = STATE_CRITICAL;
-  }
 
   /* Page and Header content checks go here */
   if (strlen (header_expect)) {
@@ -1333,6 +1329,10 @@ check_http (void)
   /* FIXME: IIRC pagesize returns headers - shouldn't we make
    * it == get_content_length(header) ??
    */
+  if(content_size_mismatch){
+     xasprintf (&msg, _("Content Size Mismatch: content size: %i expected size: %i, "),content_size,expected_content_size);
+     result = STATE_CRITICAL;
+  }
   page_len = pagesize;
   if ((max_page_len > 0) && (page_len > max_page_len)) {
     xasprintf (&msg, _("%spage size %d too large, "), msg, page_len);
